@@ -20,6 +20,10 @@ response = client.models.generate_content(
 )
 
 # 3. Save it as the main page of your website (index.md)
+# 3. Save it as the main page of your website (index.md)
 with open("index.md", "w", encoding="utf-8") as f:
+    f.write("---\n")
+    f.write("layout: home\n")
+    f.write("---\n\n")
     f.write(f"# Daily Fact: {topic}\n\n")
     f.write(response.text)
