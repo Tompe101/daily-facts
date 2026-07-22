@@ -1,5 +1,7 @@
-title: "India Daily Facts"
-description: "Unbiased, AI-generated daily updates on trending topics in India."
+title: India Daily Facts
+description: Unbiased, AI-generated daily updates on trending topics and facts in India.
+url: "https://pishorkar.tech" # Make sure it has https:// and no trailing slash
+author: Pishorkar # Or "India Daily Facts Team"
 theme: minima
 
 plugins:
