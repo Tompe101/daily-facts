@@ -1,8 +1,13 @@
 ---
 layout: page
 title: Contact
-permalink: /Contact/
+permalink: /contact/
 ---
 
-# About India Daily Facts
-This website is a fully automated project that tracks trending topics in India and uses AI to provide neutral, factual summaries.
+We would love to hear from you! 
+
+Whether you have a question about our articles, want to suggest a topic, or have a business inquiry, you can reach out to us directly.
+
+**Email:** [amigo.bond.07@gmail.com](mailto:amigo.bond.07@gmail.com)
+
+We strive to respond to all inquiries within 24 to 48 hours. Thank you for visiting India Daily Facts!
