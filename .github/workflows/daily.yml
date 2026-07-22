@@ -17,7 +17,7 @@ jobs:
           python-version: '3.10'
           
       - name: Install Dependencies
-        run: pip install google-genai pytrends pandas
+        run: pip install google-genai
         
       - name: Run the Fact Generator
         run: python script.py
