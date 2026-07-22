@@ -1,3 +1,7 @@
 title: "India Daily Facts"
 description: "Unbiased, AI-generated daily updates on trending topics in India."
 theme: minima
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
