@@ -3,8 +3,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from google import genai
 
-# 1. Fetch the #1 Trending Topic from Google Trends India
-url = "https://trends.google.com/trends/trendingsearches/daily/rss?geo=IN"
+# 1. Fetch the top trending news from Google News India (More reliable)
+url = "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"
 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
 response = urllib.request.urlopen(req).read()
 root = ET.fromstring(response)
