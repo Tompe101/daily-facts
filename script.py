@@ -1,6 +1,8 @@
 import os
 import urllib.request
 import xml.etree.ElementTree as ET
+import re
+from datetime import datetime
 from google import genai
 
 # 1. Fetch the top trending news from Times of India (Bot-friendly)
@@ -19,11 +21,21 @@ response = client.models.generate_content(
     contents=prompt,
 )
 
-# 3. Save it as the main page of your website (index.md)
-# 3. Save it as the main page of your website (index.md)
-with open("index.md", "w", encoding="utf-8") as f:
+# 3. Create the Jekyll-friendly file name (e.g., 2026-07-22-topic-name.md)
+date_str = datetime.now().strftime("%Y-%m-%d")
+# Make the topic safe for a file name by replacing spaces with hyphens
+safe_title = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
+safe_title = re.sub(r'-+', '-', safe_title).strip('-')
+
+filename = f"_posts/{date_str}-{safe_title}.md"
+
+# 4. Ensure the _posts folder exists
+os.makedirs("_posts", exist_ok=True)
+
+# 5. Save the daily fact as a new post
+with open(filename, "w", encoding="utf-8") as f:
     f.write("---\n")
-    f.write("layout: home\n")
+    f.write("layout: post\n")  # 'post' layout tells Jekyll this is a blog article
+    f.write(f"title: \"{topic}\"\n")
     f.write("---\n\n")
-    f.write(f"# Daily Fact: {topic}\n\n")
     f.write(response.text)
