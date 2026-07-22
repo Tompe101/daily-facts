@@ -2,7 +2,8 @@ name: Generate Daily Fact
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    # Runs at 02:00 UTC and 14:00 UTC every day (giving you 4 articles daily)
+    - cron: '0 2,14 * * *'
   workflow_dispatch:
 
 jobs:
@@ -28,5 +29,6 @@ jobs:
         run: |
           git config --global user.name 'GitHub Action Bot'
           git config --global user.email 'action@github.com'
-          git commit -am "Automated daily fact update" || exit 0
+          git add .
+          git commit -m "Automated daily fact update" || exit 0
           git push
