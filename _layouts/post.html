@@ -1,0 +1,57 @@
+---
+layout: default
+---
+<article class="post h-entry" itemscope itemtype="http://schema.org/NewsArticle">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="headline">{{ page.title | escape }}</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">
+        {{ page.date | date: "%b %d, %Y" }}
+      </time>
+    </p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    {{ content }}
+  </div>
+
+  <hr style="margin-top: 40px; margin-bottom: 20px;" />
+
+  <!-- INTERNAL LINKING WIDGET -->
+  <h3>🔥 Recent Breaking News</h3>
+  <ul>
+    {% for post in site.posts limit:5 %}
+      {% if post.url != page.url %}
+        <li>
+          <a href="{{ post.url | relative_url }}">{{ post.title }}</a> 
+          <small>({{ post.date | date: "%b %d, %Y" }})</small>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+
+  <!-- GOOGLE NEWS & SEARCH SCHEMA MARKUP -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": {{ page.title | jsonify }},
+    "datePublished": "{{ page.date | date_to_xmlschema }}",
+    "dateModified": "{{ page.date | date_to_xmlschema }}",
+    "mainEntityOfPage": {
+       "@type": "WebPage",
+       "@id": "{{ page.url | absolute_url }}"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "India Daily Facts",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://pishorkar.tech/assets/social-share.png"
+      }
+    }
+  }
+  </script>
+
+</article>
