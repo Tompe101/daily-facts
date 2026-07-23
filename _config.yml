@@ -18,6 +18,14 @@ image: /assets/social-share.png
 
 google_analytics: G-2ZHXDV8E00
 
+
+header_pages:
+  - about.md
+  - categories.md
+  - privacy.md
+  - terms.md
+  - contact.md
+
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
