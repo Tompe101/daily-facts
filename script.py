@@ -8,6 +8,7 @@ from datetime import datetime
 from google import genai
 
 def get_topic_image(title):
+    """Selects high-quality topic-matched images based on headline keywords."""
     t = title.lower()
     if "rahul" in t or "gandhi" in t:
         return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80"
@@ -34,7 +35,7 @@ def get_topic_image(title):
     return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80"
 
 def ping_indexnow(post_url):
-    """Pings IndexNow API so search engines index the new page within minutes."""
+    """Notifies search engines (Bing, Yandex, Seznam) instantly upon publishing."""
     try:
         api_url = f"https://api.indexnow.org/indexnow?url={urllib.parse.quote(post_url)}&key=pishorkartechkey123"
         req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -43,22 +44,49 @@ def ping_indexnow(post_url):
     except Exception as e:
         print(f"IndexNow ping failed: {e}")
 
-# Fetch RSS Feed
-url = "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"
-req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-response = urllib.request.urlopen(req).read()
-root = ET.fromstring(response)
+# Multi-source RSS feeds for broader coverage
+RSS_FEEDS = [
+    "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
+    "https://feeds.feedburner.com/NDTV-LatestNews",
+    "https://www.hindustantimes.com/feeds/rss/top-news/rssfeed.xml"
+]
 
-items = root.findall('.//item')[:2]
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 date_str = datetime.now().strftime("%Y-%m-%d")
 os.makedirs("_posts", exist_ok=True)
 
-for item in items:
-    topic = item.find('title').text.strip()
-    image_url = get_topic_image(topic)
+processed_topics = set()
+posts_generated = 0
+MAX_POSTS_PER_RUN = 2
 
-    prompt = f"""
+for feed_url in RSS_FEEDS:
+    if posts_generated >= MAX_POSTS_PER_RUN:
+        break
+        
+    try:
+        req = urllib.request.Request(feed_url, headers={'User-Agent': 'Mozilla/5.0'})
+        response = urllib.request.urlopen(req).read()
+        root = ET.fromstring(response)
+        items = root.findall('.//item')
+        
+        for item in items:
+            if posts_generated >= MAX_POSTS_PER_RUN:
+                break
+                
+            title_node = item.find('title')
+            if title_node is None or not title_node.text:
+                continue
+                
+            topic = title_node.text.strip()
+            
+            # Avoid duplicates or very short headlines
+            if topic in processed_topics or len(topic) < 15:
+                continue
+                
+            processed_topics.add(topic)
+            image_url = get_topic_image(topic)
+
+            prompt = f"""
 You are an expert journalist writing for 'India Daily Facts' (pishorkar.tech).
 Write a high-quality, comprehensive, and engaging blog post about this trending news topic: "{topic}".
 
@@ -83,39 +111,48 @@ Follow this exact structure for the output:
 Note: Do not include Jekyll front matter (---) in your text output; start directly with "CATEGORY: ...".
 """
 
-    try:
-        res = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-        content = res.text.strip()
-        
-        category = "General"
-        if content.startswith("CATEGORY:"):
-            first_line, content = content.split("\n", 1)
-            category = first_line.replace("CATEGORY:", "").strip()
-            content = content.strip()
-        
-        safe_title = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
-        safe_title = re.sub(r'-+', '-', safe_title).strip('-')
-        filename = f"_posts/{date_str}-{safe_title}.md"
-        clean_title = topic.replace('"', '\\"')
-        
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write("---\n")
-            f.write("layout: post\n")
-            f.write(f'title: "{clean_title}"\n')
-            f.write(f"categories: [{category}]\n")
-            f.write("---\n\n")
-            f.write(content)
-            
-        print(f"Successfully generated: {filename}")
-        
-        # Ping IndexNow with the new post link
-        published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title}.html"
-        ping_indexnow(published_post_url)
+            try:
+                res = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                content = res.text.strip()
+                
+                category = "General"
+                if content.startswith("CATEGORY:"):
+                    first_line, content = content.split("\n", 1)
+                    category = first_line.replace("CATEGORY:", "").strip()
+                    content = content.strip()
+                
+                safe_title = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
+                safe_title = re.sub(r'-+', '-', safe_title).strip('-')
+                filename = f"_posts/{date_str}-{safe_title}.md"
+                
+                # Skip if post already exists
+                if os.path.exists(filename):
+                    continue
 
-    except Exception as e:
-        print(f"Failed to generate post for '{topic}': {e}")
-        
-    time.sleep(5)
+                clean_title = topic.replace('"', '\\"')
+                
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.write("---\n")
+                    f.write("layout: post\n")
+                    f.write(f'title: "{clean_title}"\n')
+                    f.write(f"categories: [{category}]\n")
+                    f.write("---\n\n")
+                    f.write(content)
+                    
+                print(f"Successfully generated: {filename}")
+                posts_generated += 1
+                
+                # Ping IndexNow with the new published post URL
+                published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title}.html"
+                ping_indexnow(published_post_url)
+                
+                time.sleep(5)
+
+            except Exception as e:
+                print(f"Failed to generate post for '{topic}': {e}")
+                
+    except Exception as feed_err:
+        print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
