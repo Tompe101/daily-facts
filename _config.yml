@@ -16,6 +16,8 @@ social:
 # jekyll-seo-tag uses the 'image' property for sharing cards if available
 image: /assets/social-share.png
 
+google_analytics: G-2ZHXDV8E00
+
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
