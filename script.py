@@ -1,4 +1,5 @@
 import os
+import sys
 import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -11,14 +12,12 @@ from openai import OpenAI
 def extract_image_from_rss(item):
     """Extracts actual news story photo directly from RSS item XML tags."""
     try:
-        # Check <enclosure url="..."> tag
         enclosure = item.find('enclosure')
         if enclosure is not None and enclosure.attrib.get('url'):
             url = enclosure.attrib.get('url')
             if any(ext in url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp']) or 'image' in enclosure.attrib.get('type', ''):
                 return url
 
-        # Check Yahoo MRSS tags (<media:content>, <media:thumbnail>)
         namespaces = [
             'http://search.yahoo.com/mrss/',
             'http://video.search.yahoo.com/mrss'
@@ -31,7 +30,6 @@ def extract_image_from_rss(item):
             if media_thumb is not None and media_thumb.attrib.get('url'):
                 return media_thumb.attrib.get('url')
 
-        # Check HTML inside <description>
         desc = item.find('description')
         if desc is not None and desc.text:
             img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc.text)
@@ -48,61 +46,43 @@ def get_fallback_topic_image(title):
     """30+ Category topic-matcher for accurate fallback photos when RSS feed lacks an embedded image."""
     t = title.lower()
 
-    # Politics & Government Leaders
     if any(k in t for k in ["modi", "pm ", "pmo", "prime minister", "bjp", "shah", "cabinet", "govt"]):
         return "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["rahul", "gandhi", "congress", "parliament", "lok sabha", "rajya sabha", "election", "polls", "vote"]):
         return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["trump", "biden", "white house", "us president", "washington", "senate", "america"]):
         return "https://images.unsplash.com/photo-1580128660010-fd027e1e5f7a?auto=format&fit=crop&w=1200&q=80"
-
-    # Judiciary, Police & Crime
     if any(k in t for k in ["court", "supreme court", "high court", "judge", "justice", "bail", "verdict", "law", "legal"]):
         return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["police", "cbi", "ed", "crime", "arrest", "investigation", "fir", "cop", "murder", "scam"]):
         return "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=1200&q=80"
-
-    # Business, Finance & Stock Markets
     if any(k in t for k in ["sensex", "nifty", "stock", "market", "share", "trading", "investor"]):
         return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["bank", "rbi", "rupee", "dollar", "economy", "gdp", "inflation", "tax", "finance", "gold"]):
         return "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1200&q=80"
-
-    # Aviation, Railways & Military
     if any(k in t for k in ["flight", "airline", "airport", "plane", "aviation", "indigo", "air india"]):
         return "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["railway", "train", "express", "vande bharat", "station", "locomotive"]):
         return "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["navy", "army", "air force", "missile", "war", "defense", "military", "border", "soldier"]):
         return "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80"
-
-    # Science, Tech & Space
     if any(k in t for k in ["isro", "space", "rocket", "satellite", "nasa", "moon", "chandrayaan"]):
         return "https://images.unsplash.com/photo-1517976487192-5754f72128f2?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["ai", "google", "apple", "microsoft", "tech", "cyber", "software", "smartphone", "mobile"]):
         return "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
-
-    # Weather & Disasters
     if any(k in t for k in ["rain", "monsoon", "flood", "weather", "cyclone", "heatwave", "storm", "earthquake"]):
         return "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=1200&q=80"
-
-    # Education & Health
     if any(k in t for k in ["student", "exam", "neet", "ugc", "school", "college", "university", "cbse", "degree"]):
         return "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["hospital", "doctor", "health", "virus", "vaccine", "disease", "medical", "patient"]):
         return "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80"
-
-    # Sports
     if any(k in t for k in ["cricket", "match", "bcci", "ipl", "rohit", "virat", "stadium", "score", "wickets"]):
         return "https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=80"
     if any(k in t for k in ["football", "soccer", "olympic", "tennis", "race", "hockey", "athlete"]):
         return "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
-
-    # Cinema & Entertainment
     if any(k in t for k in ["movie", "film", "actor", "actress", "bollywood", "cinema", "ott", "box office"]):
         return "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80"
 
-    # Generic Breaking News Photo
     return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80"
 
 def ping_indexnow(post_url):
@@ -164,7 +144,9 @@ def save_article(topic, content, image_url):
     ping_indexnow(published_post_url)
     return True
 
-# Initialize RSS Feeds
+# Read engine target from command line: 'gemini', 'github', or default 'all'
+target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
+
 RSS_FEEDS = [
     "https://trends.google.co.in/trends/trendingsearches/daily/rss?geo=IN",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
@@ -172,18 +154,10 @@ RSS_FEEDS = [
     "https://www.hindustantimes.com/feeds/rss/top-news/rssfeed.xml"
 ]
 
-# Initialize Clients
-gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-github_client = OpenAI(
-    base_url="https://models.inference.ai.azure.com",
-    api_key=os.environ.get("GITHUB_TOKEN"),
-)
-
 os.makedirs("_posts", exist_ok=True)
 processed_topics = set()
-
-# Fetch topics across all feeds
 feed_items = []
+
 for feed_url in RSS_FEEDS:
     try:
         req = urllib.request.Request(feed_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -192,11 +166,12 @@ for feed_url in RSS_FEEDS:
         items = root.findall('.//item')
         for item in items:
             title_node = item.find('title')
-            if title_node is not None and title_node.text:
-                topic = title_node.text.strip()
-                if len(topic) >= 15 and topic not in processed_topics:
-                    feed_items.append((topic, item))
-                    processed_topics.add(topic)
+            if title_node is None or not title_node.text:
+                continue
+            topic = title_node.text.strip()
+            if len(topic) >= 15 and topic not in processed_topics:
+                feed_items.append((topic, item))
+                processed_topics.add(topic)
     except Exception as feed_err:
         print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
 
@@ -231,54 +206,56 @@ TAGS: <Provide 4-5 comma-separated SEO keywords based on the topic>
 Do NOT include Jekyll front matter (---) or title heading (#). Start directly with CATEGORY:
 """
 
-# -------------------------------------------------------------
-# ENGINE 1: Generate 3 Articles using Gemini 2.5 Flash
-# -------------------------------------------------------------
-gemini_count = 0
-print("--- STARTING GEMINI GENERATION ENGINE (3 Articles) ---")
-for topic, item in feed_items:
-    if gemini_count >= 3:
-        break
+# RUN GEMINI ENGINE
+if target_engine in ["gemini", "all"]:
+    print("--- RUNNING GEMINI ENGINE ---")
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if not gemini_key:
+        print("Error: GEMINI_API_KEY is not set. Skipping Gemini execution.")
+    else:
+        gemini_client = genai.Client(api_key=gemini_key)
+        count = 0
+        for topic, item in feed_items:
+            if count >= 3:
+                break
+            image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
+            prompt = prompt_template.format(topic=topic)
+            try:
+                res = gemini_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                if save_article(topic, res.text.strip(), image_url):
+                    count += 1
+                    time.sleep(3)
+            except Exception as e:
+                print(f"Gemini error for '{topic}': {e}")
 
-    image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
-    prompt = prompt_template.format(topic=topic)
-
-    try:
-        res = gemini_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
+# RUN GITHUB GPT-4o ENGINE
+if target_engine in ["github", "all"]:
+    print("--- RUNNING GITHUB GPT-4o ENGINE ---")
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        print("Error: GITHUB_TOKEN is not set. Skipping GPT-4o execution.")
+    else:
+        github_client = OpenAI(
+            base_url="https://models.inference.ai.azure.com",
+            api_key=github_token,
         )
-        if save_article(topic, res.text.strip(), image_url):
-            gemini_count += 1
-            time.sleep(3)
-    except Exception as e:
-        print(f"Gemini failed for '{topic}': {e}")
-
-# Remove topics used by Gemini from the pool
-feed_items = feed_items[gemini_count:]
-
-# -------------------------------------------------------------
-# ENGINE 2: Generate 3 Articles using GitHub Models (GPT-4o)
-# -------------------------------------------------------------
-github_count = 0
-print("--- STARTING GITHUB GPT-4o GENERATION ENGINE (3 Articles) ---")
-for topic, item in feed_items:
-    if github_count >= 3:
-        break
-
-    image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
-    prompt = prompt_template.format(topic=topic)
-
-    try:
-        res = github_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        if save_article(topic, res.choices[0].message.content.strip(), image_url):
-            github_count += 1
-            time.sleep(3)
-    except Exception as e:
-        print(f"GitHub GPT-4o failed for '{topic}': {e}")
-
-print(f"Job Complete! Total posts created: {gemini_count + github_count} (Gemini: {gemini_count}, GPT-4o: {github_count})")
+        count = 0
+        for topic, item in feed_items:
+            if count >= 3:
+                break
+            image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
+            prompt = prompt_template.format(topic=topic)
+            try:
+                res = github_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7
+                )
+                if save_article(topic, res.choices[0].message.content.strip(), image_url):
+                    count += 1
+                    time.sleep(3)
+            except Exception as e:
+                print(f"GitHub GPT-4o error for '{topic}': {e}")
