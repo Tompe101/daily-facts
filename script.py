@@ -6,6 +6,7 @@ import re
 import time
 from datetime import datetime
 from google import genai
+from openai import OpenAI
 
 def extract_image_from_rss(item):
     """Extracts actual news story photo directly from RSS item XML tags."""
@@ -114,7 +115,56 @@ def ping_indexnow(post_url):
     except Exception as e:
         print(f"IndexNow ping failed: {e}")
 
-# RSS feeds from major trusted Indian news publishers & Google Trends India
+def save_article(topic, content, image_url):
+    """Parses model response and writes clean Jekyll Markdown file."""
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    category = "India"
+    tags = "news, trending, india"
+    
+    lines = content.split('\n')
+    clean_lines = []
+    
+    for line in lines:
+        if line.startswith("CATEGORY:"):
+            category = line.replace("CATEGORY:", "").strip()
+        elif line.startswith("TAGS:"):
+            tags = line.replace("TAGS:", "").strip()
+        else:
+            clean_lines.append(line)
+    
+    content = '\n'.join(clean_lines).strip()
+    
+    safe_title_slug = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
+    safe_title_slug = re.sub(r'-+', '-', safe_title_slug).strip('-')
+    safe_alt_text = re.sub(r'[^a-zA-Z0-9 ]', '', topic).strip()
+    
+    filename = f"_posts/{date_str}-{safe_title_slug}.md"
+    if os.path.exists(filename):
+        return False
+
+    image_markdown = f"\n\n![{safe_alt_text}]({image_url})\n\n"
+    if "## In-Depth Report" in content:
+        content = content.replace("## In-Depth Report", f"{image_markdown}## In-Depth Report")
+    else:
+        content = image_markdown + content
+
+    clean_title = topic.replace('"', '\\"')
+    
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write("---\n")
+        f.write("layout: post\n")
+        f.write(f'title: "{clean_title}"\n')
+        f.write(f"categories: [{category}]\n")
+        f.write(f"tags: [{tags}]\n")
+        f.write("---\n\n")
+        f.write(content)
+        
+    print(f"Successfully generated: {filename}")
+    published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}.html"
+    ping_indexnow(published_post_url)
+    return True
+
+# Initialize RSS Feeds
 RSS_FEEDS = [
     "https://trends.google.co.in/trends/trendingsearches/daily/rss?geo=IN",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
@@ -122,46 +172,35 @@ RSS_FEEDS = [
     "https://www.hindustantimes.com/feeds/rss/top-news/rssfeed.xml"
 ]
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-date_str = datetime.now().strftime("%Y-%m-%d")
+# Initialize Clients
+gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+github_client = OpenAI(
+    base_url="https://models.inference.ai.azure.com",
+    api_key=os.environ.get("GITHUB_TOKEN"),
+)
+
 os.makedirs("_posts", exist_ok=True)
-
 processed_topics = set()
-posts_generated = 0
-MAX_POSTS_PER_RUN = 2
 
+# Fetch topics across all feeds
+feed_items = []
 for feed_url in RSS_FEEDS:
-    if posts_generated >= MAX_POSTS_PER_RUN:
-        break
-        
     try:
         req = urllib.request.Request(feed_url, headers={'User-Agent': 'Mozilla/5.0'})
         response = urllib.request.urlopen(req).read()
         root = ET.fromstring(response)
         items = root.findall('.//item')
-        
         for item in items:
-            if posts_generated >= MAX_POSTS_PER_RUN:
-                break
-                
             title_node = item.find('title')
-            if title_node is None or not title_node.text:
-                continue
-                
-            topic = title_node.text.strip()
-            
-            # Avoid duplicates or short headlines
-            if topic in processed_topics or len(topic) < 15:
-                continue
-                
-            processed_topics.add(topic)
-            
-            # Extract real news photo from RSS feed; fallback to 30+ category matcher if missing
-            image_url = extract_image_from_rss(item)
-            if not image_url:
-                image_url = get_fallback_topic_image(topic)
+            if title_node is not None and title_node.text:
+                topic = title_node.text.strip()
+                if len(topic) >= 15 and topic not in processed_topics:
+                    feed_items.append((topic, item))
+                    processed_topics.add(topic)
+    except Exception as feed_err:
+        print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
 
-            prompt = f"""
+prompt_template = """
 You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
 Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
 The article MUST be comprehensive, aiming for 800 to 1000 words.
@@ -192,69 +231,54 @@ TAGS: <Provide 4-5 comma-separated SEO keywords based on the topic>
 Do NOT include Jekyll front matter (---) or title heading (#). Start directly with CATEGORY:
 """
 
-            try:
-                res = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                )
-                content = res.text.strip()
-                
-                category = "India"
-                tags = "news, trending, india"
-                
-                # Split content into lines to extract Category and Tags
-                lines = content.split('\n')
-                clean_lines = []
-                
-                for line in lines:
-                    if line.startswith("CATEGORY:"):
-                        category = line.replace("CATEGORY:", "").strip()
-                    elif line.startswith("TAGS:"):
-                        tags = line.replace("TAGS:", "").strip()
-                    else:
-                        clean_lines.append(line)
-                
-                content = '\n'.join(clean_lines).strip()
-                
-                # Sanitize headline for clean Markdown alt text and safe filenames
-                safe_title_slug = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
-                safe_title_slug = re.sub(r'-+', '-', safe_title_slug).strip('-')
-                safe_alt_text = re.sub(r'[^a-zA-Z0-9 ]', '', topic).strip()
-                
-                filename = f"_posts/{date_str}-{safe_title_slug}.md"
-                
-                if os.path.exists(filename):
-                    continue
+# -------------------------------------------------------------
+# ENGINE 1: Generate 3 Articles using Gemini 2.5 Flash
+# -------------------------------------------------------------
+gemini_count = 0
+print("--- STARTING GEMINI GENERATION ENGINE (3 Articles) ---")
+for topic, item in feed_items:
+    if gemini_count >= 3:
+        break
 
-                # Inject image tag cleanly right after TL;DR Summary / before In-Depth Report
-                image_markdown = f"\n\n![{safe_alt_text}]({image_url})\n\n"
-                if "## In-Depth Report" in content:
-                    content = content.replace("## In-Depth Report", f"{image_markdown}## In-Depth Report")
-                else:
-                    content = image_markdown + content
+    image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
+    prompt = prompt_template.format(topic=topic)
 
-                clean_title = topic.replace('"', '\\"')
-                
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write("---\n")
-                    f.write("layout: post\n")
-                    f.write(f'title: "{clean_title}"\n')
-                    f.write(f"categories: [{category}]\n")
-                    f.write(f"tags: [{tags}]\n")
-                    f.write("---\n\n")
-                    f.write(content)
-                    
-                print(f"Successfully generated: {filename}")
-                posts_generated += 1
-                
-                # Ping IndexNow for instant search indexing
-                published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}.html"
-                ping_indexnow(published_post_url)
-                
-                time.sleep(5)
+    try:
+        res = gemini_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        if save_article(topic, res.text.strip(), image_url):
+            gemini_count += 1
+            time.sleep(3)
+    except Exception as e:
+        print(f"Gemini failed for '{topic}': {e}")
 
-            except Exception as e:
-                print(f"Failed to generate post for '{topic}': {e}")
-                
-    except Exception as feed_err:
-        print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
+# Remove topics used by Gemini from the pool
+feed_items = feed_items[gemini_count:]
+
+# -------------------------------------------------------------
+# ENGINE 2: Generate 3 Articles using GitHub Models (GPT-4o)
+# -------------------------------------------------------------
+github_count = 0
+print("--- STARTING GITHUB GPT-4o GENERATION ENGINE (3 Articles) ---")
+for topic, item in feed_items:
+    if github_count >= 3:
+        break
+
+    image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
+    prompt = prompt_template.format(topic=topic)
+
+    try:
+        res = github_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+        if save_article(topic, res.choices[0].message.content.strip(), image_url):
+            github_count += 1
+            time.sleep(3)
+    except Exception as e:
+        print(f"GitHub GPT-4o failed for '{topic}': {e}")
+
+print(f"Job Complete! Total posts created: {gemini_count + github_count} (Gemini: {gemini_count}, GPT-4o: {github_count})")
