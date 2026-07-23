@@ -114,8 +114,9 @@ def ping_indexnow(post_url):
     except Exception as e:
         print(f"IndexNow ping failed: {e}")
 
-# RSS feeds from major trusted Indian news publishers
+# RSS feeds from major trusted Indian news publishers & Google Trends India
 RSS_FEEDS = [
+    "https://trends.google.co.in/trends/trendingsearches/daily/rss?geo=IN",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
     "https://feeds.feedburner.com/NDTV-LatestNews",
     "https://www.hindustantimes.com/feeds/rss/top-news/rssfeed.xml"
@@ -161,21 +162,28 @@ for feed_url in RSS_FEEDS:
                 image_url = get_fallback_topic_image(topic)
 
             prompt = f"""
-You are an expert journalist writing for 'India Daily Facts' (pishorkar.tech).
-Write a high-quality, comprehensive, and engaging news post about this topic: "{topic}".
+You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
+Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
+The article MUST be comprehensive, aiming for 800 to 1000 words.
 
-Follow this exact structure for the output:
+Follow this EXACT structure for the output:
 
-CATEGORY: <Choose ONE from: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
+CATEGORY: <Choose ONE: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
+TAGS: <Provide 4-5 comma-separated SEO keywords based on the topic>
 
-## Quick Summary
+## TL;DR Summary
 * <Bullet point 1 summarizing headline>
 * <Bullet point 2 summarizing key context>
 * <Bullet point 3 summarizing current status>
 
-## Detailed Analysis
-Write an in-depth, well-structured, factual news report (500 to 600 words minimum). 
-Use subheadings (###), short clear paragraphs, background context, and a neutral journalistic tone.
+## In-Depth Report
+<Write 4-5 paragraphs explaining the current event comprehensively. Use subheadings (###), clear paragraphs, and a neutral journalistic tone.>
+
+## Background & Context
+<Write 2-3 paragraphs explaining the history or previous events that led up to this moment.>
+
+## Why It Matters (Impact Analysis)
+<Write 2-3 paragraphs explaining how this impacts the public, industry, or the economy.>
 
 ## Key Takeaways
 * <Key insight or future implication 1>
@@ -192,10 +200,21 @@ Do NOT include Jekyll front matter (---) or title heading (#). Start directly wi
                 content = res.text.strip()
                 
                 category = "India"
-                if content.startswith("CATEGORY:"):
-                    first_line, content = content.split("\n", 1)
-                    category = first_line.replace("CATEGORY:", "").strip()
-                    content = content.strip()
+                tags = "news, trending, india"
+                
+                # Split content into lines to extract Category and Tags
+                lines = content.split('\n')
+                clean_lines = []
+                
+                for line in lines:
+                    if line.startswith("CATEGORY:"):
+                        category = line.replace("CATEGORY:", "").strip()
+                    elif line.startswith("TAGS:"):
+                        tags = line.replace("TAGS:", "").strip()
+                    else:
+                        clean_lines.append(line)
+                
+                content = '\n'.join(clean_lines).strip()
                 
                 # Sanitize headline for clean Markdown alt text and safe filenames
                 safe_title_slug = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
@@ -207,10 +226,10 @@ Do NOT include Jekyll front matter (---) or title heading (#). Start directly wi
                 if os.path.exists(filename):
                     continue
 
-                # Inject image tag cleanly right after Quick Summary
+                # Inject image tag cleanly right after TL;DR Summary / before In-Depth Report
                 image_markdown = f"\n\n![{safe_alt_text}]({image_url})\n\n"
-                if "## Detailed Analysis" in content:
-                    content = content.replace("## Detailed Analysis", f"{image_markdown}## Detailed Analysis")
+                if "## In-Depth Report" in content:
+                    content = content.replace("## In-Depth Report", f"{image_markdown}## In-Depth Report")
                 else:
                     content = image_markdown + content
 
@@ -221,6 +240,7 @@ Do NOT include Jekyll front matter (---) or title heading (#). Start directly wi
                     f.write("layout: post\n")
                     f.write(f'title: "{clean_title}"\n')
                     f.write(f"categories: [{category}]\n")
+                    f.write(f"tags: [{tags}]\n")
                     f.write("---\n\n")
                     f.write(content)
                     
