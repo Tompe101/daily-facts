@@ -4,6 +4,18 @@ url: "https://pishorkar.tech" # Make sure it has https:// and no trailing slash
 author: Pishorkar # Or "India Daily Facts Team"
 theme: minima
 
+# Favicon (Minima theme setting)
+favicon: /assets/favicon.ico
+
+# Social Sharing Image (jekyll-seo-tag plugin setting)
+logo: /assets/social-share.png # Used for the site logo
+social:
+  name: India Daily Facts # Or your name/brand
+  links:
+    - https://twitter.com/yourhandle # Optional: Add your social links
+# jekyll-seo-tag uses the 'image' property for sharing cards if available
+image: /assets/social-share.png
+
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
