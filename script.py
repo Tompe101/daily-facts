@@ -23,10 +23,25 @@ os.makedirs("_posts", exist_ok=True)
 for item in items:
     topic = item.find('title').text.strip()
     
-    # Generate clean keyword for working image fallback (LoremFlickr)
-    words = [w for w in re.sub(r'[^a-zA-Z ]', '', topic).split() if len(w) > 3]
-    clean_keyword = words[0].lower() if words else "news"
-    image_url = f"https://loremflickr.com/1200/800/india,{clean_keyword}"
+    # --- EXTRACT REAL NEWS IMAGE FROM RSS FEED ---
+    image_url = None
+    
+    # Check 1: <enclosure> tag in RSS
+    enclosure = item.find('enclosure')
+    if enclosure is not None and enclosure.attrib.get('url'):
+        image_url = enclosure.attrib.get('url')
+        
+    # Check 2: <img> tag embedded inside <description>
+    if not image_url:
+        desc_node = item.find('description')
+        if desc_node is not None and desc_node.text:
+            img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc_node.text)
+            if img_match:
+                image_url = img_match.group(1)
+                
+    # Check 3: Clean, neutral editorial image fallback (no random Flickr photos!)
+    if not image_url:
+        image_url = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=1200&auto=format&fit=crop"
 
     # Prompt Gemini to auto-categorize and structure the full length article
     prompt = f"""
