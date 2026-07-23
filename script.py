@@ -6,13 +6,50 @@ import time
 from datetime import datetime
 from google import genai
 
+def get_topic_image(title):
+    """
+    Scans the news title for key subjects and returns a high-resolution,
+    professional, hotlink-friendly image matching the exact topic.
+    """
+    t = title.lower()
+    
+    # 1. Specific Political Leaders
+    if "rahul" in t or "gandhi" in t:
+        return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80"
+    elif "modi" in t or "pmo" in t or "prime minister" in t:
+        return "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80"
+    
+    # 2. Key Institutions & Categories
+    elif any(k in t for k in ["court", "supreme court", "judge", "justice", "law", "bail"]):
+        return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["student", "exam", "neet", "ugc", "school", "college", "protest"]):
+        return "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["parliament", "mps", "lok sabha", "rajya sabha", "election", "bjp", "congress"]):
+        return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["cricket", "match", "bcci", "ipl", "rohit", "virat", "stadium"]):
+        return "https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["isro", "space", "rocket", "satellite", "nasa", "moon"]):
+        return "https://images.unsplash.com/photo-1517976487192-5754f72128f2?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["sensex", "nifty", "stock", "market", "rupee", "bank", "rbi", "economy"]):
+        return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["police", "cbi", "ed", "crime", "arrest", "investigation"]):
+        return "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["rain", "monsoon", "flood", "weather", "cyclone"]):
+        return "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=1200&q=80"
+    elif any(k in t for k in ["tech", "ai", "google", "apple", "mobile", "cyber"]):
+        return "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
+    
+    # 3. Editorial Fallback for General News
+    return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80"
+
+
 # 1. Fetch the RSS feed from Times of India
 url = "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"
 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
 response = urllib.request.urlopen(req).read()
 root = ET.fromstring(response)
 
-# 2. Get top 2 articles per run (runs twice daily = 4 articles daily)
+# 2. Get top 2 articles per run (4 posts daily)
 items = root.findall('.//item')[:2]
 
 # Initialize Gemini Client
@@ -23,25 +60,8 @@ os.makedirs("_posts", exist_ok=True)
 for item in items:
     topic = item.find('title').text.strip()
     
-    # --- EXTRACT REAL NEWS IMAGE FROM RSS FEED ---
-    image_url = None
-    
-    # Check 1: <enclosure> tag in RSS
-    enclosure = item.find('enclosure')
-    if enclosure is not None and enclosure.attrib.get('url'):
-        image_url = enclosure.attrib.get('url')
-        
-    # Check 2: <img> tag embedded inside <description>
-    if not image_url:
-        desc_node = item.find('description')
-        if desc_node is not None and desc_node.text:
-            img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', desc_node.text)
-            if img_match:
-                image_url = img_match.group(1)
-                
-    # Check 3: Clean, neutral editorial image fallback (no random Flickr photos!)
-    if not image_url:
-        image_url = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=1200&auto=format&fit=crop"
+    # Get high quality, exact match topic image
+    image_url = get_topic_image(topic)
 
     # Prompt Gemini to auto-categorize and structure the full length article
     prompt = f"""
@@ -76,22 +96,21 @@ Note: Do not include Jekyll front matter (---) in your text output; start direct
         )
         content = res.text.strip()
         
-        # Parse the Category from the first line
+        # Parse Category
         category = "General"
         if content.startswith("CATEGORY:"):
             first_line, content = content.split("\n", 1)
             category = first_line.replace("CATEGORY:", "").strip()
             content = content.strip()
         
-        # Create a safe file slug (YEAR-MONTH-DAY-title.md)
+        # Safe filename slug
         safe_title = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
         safe_title = re.sub(r'-+', '-', safe_title).strip('-')
         filename = f"_posts/{date_str}-{safe_title}.md"
         
-        # Escape quotes in title for YAML front matter
         clean_title = topic.replace('"', '\\"')
         
-        # Save the structured post with Front Matter
+        # Save post with YAML Front Matter
         with open(filename, "w", encoding="utf-8") as f:
             f.write("---\n")
             f.write("layout: post\n")
@@ -105,5 +124,4 @@ Note: Do not include Jekyll front matter (---) in your text output; start direct
     except Exception as e:
         print(f"Failed to generate post for '{topic}': {e}")
         
-    # Respect API rate limits between requests
     time.sleep(5)
