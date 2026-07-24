@@ -5,6 +5,7 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 import re
 import time
+import json
 from datetime import datetime
 from google import genai
 from openai import OpenAI
@@ -95,11 +96,34 @@ def ping_indexnow(post_url):
     except Exception as e:
         print(f"IndexNow ping failed: {e}")
 
+def push_to_social_media(title, post_url):
+    """Sends the new article to an n8n webhook to auto-post on social platforms."""
+    # Replace the URL below with your actual n8n Production Webhook URL
+    webhook_url = "YOUR_N8N_WEBHOOK_URL_HERE"
+    
+    # Safety check so it doesn't crash if you haven't added the URL yet
+    if webhook_url == "YOUR_N8N_WEBHOOK_URL_HERE":
+        return 
+        
+    data = json.dumps({
+        "title": title,
+        "url": post_url,
+        "message": f"🚨 Breaking News: {title}\n\nRead the full story here: {post_url}"
+    }).encode("utf-8")
+    
+    try:
+        req = urllib.request.Request(webhook_url, data=data, headers={'Content-Type': 'application/json'})
+        urllib.request.urlopen(req)
+        print(f"Social Media Webhook Sent for: {title}")
+    except Exception as e:
+        print(f"Webhook failed: {e}")
+
 def save_article(topic, content, image_url):
     """Parses model response and writes clean Jekyll Markdown file."""
     date_str = datetime.now().strftime("%Y-%m-%d")
     category = "India"
     tags = "news, trending, india"
+    description = topic # Fallback description
     
     lines = content.split('\n')
     clean_lines = []
@@ -109,6 +133,8 @@ def save_article(topic, content, image_url):
             category = line.replace("CATEGORY:", "").strip()
         elif line.startswith("TAGS:"):
             tags = line.replace("TAGS:", "").strip()
+        elif line.startswith("DESCRIPTION:"):
+            description = line.replace("DESCRIPTION:", "").strip()
         else:
             clean_lines.append(line)
     
@@ -129,11 +155,14 @@ def save_article(topic, content, image_url):
         content = image_markdown + content
 
     clean_title = topic.replace('"', '\\"')
+    # Escape quotes in description to prevent Jekyll build errors
+    clean_desc = description.replace('"', '\\"')
     
     with open(filename, "w", encoding="utf-8") as f:
         f.write("---\n")
         f.write("layout: post\n")
         f.write(f'title: "{clean_title}"\n')
+        f.write(f'description: "{clean_desc}"\n')
         f.write(f"categories: [{category}]\n")
         f.write(f"tags: [{tags}]\n")
         f.write("---\n\n")
@@ -141,8 +170,28 @@ def save_article(topic, content, image_url):
         
     print(f"Successfully generated: {filename}")
     published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}.html"
+    
     ping_indexnow(published_post_url)
+    push_to_social_media(clean_title, published_post_url)
+    
     return True
+
+def ping_sitemaps():
+    """Force Google and Bing to crawl the new articles immediately."""
+    sitemap_url = urllib.parse.quote("https://pishorkar.tech/sitemap.xml")
+    
+    print("\n--- PINGING SITEMAPS ---")
+    try:
+        urllib.request.urlopen(f"https://www.google.com/ping?sitemap={sitemap_url}")
+        print("Successfully pinged Google Sitemap")
+    except Exception:
+        pass # Google sometimes restricts automated pings silently
+        
+    try:
+        urllib.request.urlopen(f"https://www.bing.com/ping?sitemap={sitemap_url}")
+        print("Successfully pinged Bing Sitemap")
+    except Exception as e:
+        print(f"Bing ping failed: {e}")
 
 # Read engine target from command line: 'gemini', 'github', or default 'all'
 target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
@@ -184,6 +233,7 @@ Follow this EXACT structure for the output:
 
 CATEGORY: <Choose ONE: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
 TAGS: <Provide 4-5 comma-separated SEO keywords based on the topic>
+DESCRIPTION: <Write a compelling, keyword-rich meta description under 150 characters>
 
 ## TL;DR Summary
 * <Bullet point 1 summarizing headline>
@@ -259,3 +309,6 @@ if target_engine in ["github", "all"]:
                     time.sleep(3)
             except Exception as e:
                 print(f"GitHub GPT-4o error for '{topic}': {e}")
+
+# Finally, ping sitemaps after all content is generated
+ping_sitemaps()
