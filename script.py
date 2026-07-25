@@ -44,46 +44,26 @@ def extract_image_from_rss(item):
     return None
 
 def get_fallback_topic_image(title):
-    """30+ Category topic-matcher for accurate fallback photos when RSS feed lacks an embedded image."""
+    """30+ Category topic-matcher for accurate fallback photos."""
     t = title.lower()
-
     if any(k in t for k in ["modi", "pm ", "pmo", "prime minister", "bjp", "shah", "cabinet", "govt"]):
         return "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["rahul", "gandhi", "congress", "parliament", "lok sabha", "rajya sabha", "election", "polls", "vote"]):
+    if any(k in t for k in ["rahul", "gandhi", "congress", "parliament", "lok sabha", "rajya sabha", "election", "polls"]):
         return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["trump", "biden", "white house", "us president", "washington", "senate", "america"]):
+    if any(k in t for k in ["trump", "biden", "white house", "us president", "washington"]):
         return "https://images.unsplash.com/photo-1580128660010-fd027e1e5f7a?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["court", "supreme court", "high court", "judge", "justice", "bail", "verdict", "law", "legal"]):
+    if any(k in t for k in ["court", "supreme court", "high court", "judge", "justice", "bail", "verdict"]):
         return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["police", "cbi", "ed", "crime", "arrest", "investigation", "fir", "cop", "murder", "scam"]):
+    if any(k in t for k in ["police", "cbi", "ed", "crime", "arrest", "investigation", "fir", "scam"]):
         return "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["sensex", "nifty", "stock", "market", "share", "trading", "investor"]):
+    if any(k in t for k in ["sensex", "nifty", "stock", "market", "share", "trading"]):
         return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["bank", "rbi", "rupee", "dollar", "economy", "gdp", "inflation", "tax", "finance", "gold"]):
+    if any(k in t for k in ["bank", "rbi", "rupee", "economy", "gdp", "tax", "finance"]):
         return "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["flight", "airline", "airport", "plane", "aviation", "indigo", "air india"]):
-        return "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["railway", "train", "express", "vande bharat", "station", "locomotive"]):
-        return "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["navy", "army", "air force", "missile", "war", "defense", "military", "border", "soldier"]):
-        return "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["isro", "space", "rocket", "satellite", "nasa", "moon", "chandrayaan"]):
-        return "https://images.unsplash.com/photo-1517976487192-5754f72128f2?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["ai", "google", "apple", "microsoft", "tech", "cyber", "software", "smartphone", "mobile"]):
-        return "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["rain", "monsoon", "flood", "weather", "cyclone", "heatwave", "storm", "earthquake"]):
-        return "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["student", "exam", "neet", "ugc", "school", "college", "university", "cbse", "degree"]):
-        return "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["hospital", "doctor", "health", "virus", "vaccine", "disease", "medical", "patient"]):
-        return "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["cricket", "match", "bcci", "ipl", "rohit", "virat", "stadium", "score", "wickets"]):
+    if any(k in t for k in ["cricket", "match", "bcci", "ipl", "rohit", "virat", "stadium"]):
         return "https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["football", "soccer", "olympic", "tennis", "race", "hockey", "athlete"]):
-        return "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80"
-    if any(k in t for k in ["movie", "film", "actor", "actress", "bollywood", "cinema", "ott", "box office"]):
+    if any(k in t for k in ["movie", "film", "actor", "bollywood", "cinema", "ott"]):
         return "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80"
-
     return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80"
 
 def ping_indexnow(post_url):
@@ -98,10 +78,8 @@ def ping_indexnow(post_url):
 
 def push_to_social_media(title, post_url):
     """Sends the new article to an n8n webhook to auto-post on social platforms."""
-    # Replace the URL below with your actual n8n Production Webhook URL
     webhook_url = "YOUR_N8N_WEBHOOK_URL_HERE"
     
-    # Safety check so it doesn't crash if you haven't added the URL yet
     if webhook_url == "YOUR_N8N_WEBHOOK_URL_HERE":
         return 
         
@@ -118,18 +96,21 @@ def push_to_social_media(title, post_url):
     except Exception as e:
         print(f"Webhook failed: {e}")
 
-def save_article(topic, content, image_url):
+def save_article(topic, content, image_url, language="English"):
     """Parses model response and writes clean Jekyll Markdown file."""
     date_str = datetime.now().strftime("%Y-%m-%d")
     category = "India"
-    tags = "news, trending, india"
-    description = topic # Fallback description
+    tags = f"news, trending, india, {language.lower()}"
+    description = topic
+    translated_title = topic 
     
     lines = content.split('\n')
     clean_lines = []
     
     for line in lines:
-        if line.startswith("CATEGORY:"):
+        if line.startswith("TITLE:"):
+            translated_title = line.replace("TITLE:", "").strip()
+        elif line.startswith("CATEGORY:"):
             category = line.replace("CATEGORY:", "").strip()
         elif line.startswith("TAGS:"):
             tags = line.replace("TAGS:", "").strip()
@@ -140,22 +121,25 @@ def save_article(topic, content, image_url):
     
     content = '\n'.join(clean_lines).strip()
     
+    # Keep the URL slug in English for clean routing, but append the language
     safe_title_slug = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
     safe_title_slug = re.sub(r'-+', '-', safe_title_slug).strip('-')
-    safe_alt_text = re.sub(r'[^a-zA-Z0-9 ]', '', topic).strip()
+    safe_alt_text = re.sub(r'[^a-zA-Z0-9 ]', '', translated_title).strip()
     
-    filename = f"_posts/{date_str}-{safe_title_slug}.md"
+    lang_suffix = f"-{language.lower()}" if language != "English" else ""
+    filename = f"_posts/{date_str}-{safe_title_slug}{lang_suffix}.md"
+    
     if os.path.exists(filename):
         return False
 
     image_markdown = f"\n\n![{safe_alt_text}]({image_url})\n\n"
-    if "## In-Depth Report" in content:
-        content = content.replace("## In-Depth Report", f"{image_markdown}## In-Depth Report")
+    if "## " in content:
+        # Insert image right before the first major heading (usually TL;DR or In-Depth)
+        content = re.sub(r'(## )', f'{image_markdown}\\1', content, count=1)
     else:
         content = image_markdown + content
 
-    clean_title = topic.replace('"', '\\"')
-    # Escape quotes in description to prevent Jekyll build errors
+    clean_title = translated_title.replace('"', '\\"')
     clean_desc = description.replace('"', '\\"')
     
     with open(filename, "w", encoding="utf-8") as f:
@@ -163,13 +147,13 @@ def save_article(topic, content, image_url):
         f.write("layout: post\n")
         f.write(f'title: "{clean_title}"\n')
         f.write(f'description: "{clean_desc}"\n')
-        f.write(f"categories: [{category}]\n")
+        f.write(f"categories: [{category}, {language}]\n")
         f.write(f"tags: [{tags}]\n")
         f.write("---\n\n")
         f.write(content)
         
     print(f"Successfully generated: {filename}")
-    published_post_url = f"https://pishorkar.tech/{category.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}.html"
+    published_post_url = f"https://pishorkar.tech/{category.lower()}/{language.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}{lang_suffix}.html"
     
     ping_indexnow(published_post_url)
     push_to_social_media(clean_title, published_post_url)
@@ -179,13 +163,12 @@ def save_article(topic, content, image_url):
 def ping_sitemaps():
     """Force Google and Bing to crawl the new articles immediately."""
     sitemap_url = urllib.parse.quote("https://pishorkar.tech/sitemap.xml")
-    
     print("\n--- PINGING SITEMAPS ---")
     try:
         urllib.request.urlopen(f"https://www.google.com/ping?sitemap={sitemap_url}")
         print("Successfully pinged Google Sitemap")
     except Exception:
-        pass # Google sometimes restricts automated pings silently
+        pass 
         
     try:
         urllib.request.urlopen(f"https://www.bing.com/ping?sitemap={sitemap_url}")
@@ -193,14 +176,12 @@ def ping_sitemaps():
     except Exception as e:
         print(f"Bing ping failed: {e}")
 
-# Read engine target from command line: 'gemini', 'github', or default 'all'
 target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
 
 RSS_FEEDS = [
     "https://trends.google.co.in/trends/trendingsearches/daily/rss?geo=IN",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-    "https://feeds.feedburner.com/NDTV-LatestNews",
-    "https://www.hindustantimes.com/feeds/rss/top-news/rssfeed.xml"
+    "https://feeds.feedburner.com/NDTV-LatestNews"
 ]
 
 os.makedirs("_posts", exist_ok=True)
@@ -227,34 +208,37 @@ for feed_url in RSS_FEEDS:
 prompt_template = """
 You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
 Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
-The article MUST be comprehensive, aiming for 800 to 1000 words.
+The ENTIRE output must be written in the {language} language.
 
 Follow this EXACT structure for the output:
 
+TITLE: <Write a compelling news headline in {language}>
 CATEGORY: <Choose ONE: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
-TAGS: <Provide 4-5 comma-separated SEO keywords based on the topic>
-DESCRIPTION: <Write a compelling, keyword-rich meta description under 150 characters>
+TAGS: <Provide 4-5 comma-separated SEO keywords in {language}>
+DESCRIPTION: <Write a keyword-rich meta description under 150 characters in {language}>
 
 ## TL;DR Summary
-* <Bullet point 1 summarizing headline>
-* <Bullet point 2 summarizing key context>
-* <Bullet point 3 summarizing current status>
+* <Bullet point 1 summarizing headline in {language}>
+* <Bullet point 2 summarizing key context in {language}>
+* <Bullet point 3 summarizing current status in {language}>
 
 ## In-Depth Report
-<Write 4-5 paragraphs explaining the current event comprehensively. Use subheadings (###), clear paragraphs, and a neutral journalistic tone.>
+<Write 4-5 paragraphs explaining the current event comprehensively in {language}. Use subheadings (###), clear paragraphs, and a neutral journalistic tone.>
 
 ## Background & Context
-<Write 2-3 paragraphs explaining the history or previous events that led up to this moment.>
+<Write 2-3 paragraphs explaining the history or previous events that led up to this moment in {language}.>
 
 ## Why It Matters (Impact Analysis)
-<Write 2-3 paragraphs explaining how this impacts the public, industry, or the economy.>
+<Write 2-3 paragraphs explaining how this impacts the public, industry, or the economy in {language}.>
 
 ## Key Takeaways
-* <Key insight or future implication 1>
-* <Key insight or future implication 2>
+* <Key insight or future implication 1 in {language}>
+* <Key insight or future implication 2 in {language}>
 
-Do NOT include Jekyll front matter (---) or title heading (#). Start directly with CATEGORY:
+Do NOT include Jekyll front matter (---) or a title markdown heading (#). Start directly with TITLE:
 """
+
+LANGUAGES = ["English", "Marathi", "Hindi"]
 
 # RUN GEMINI ENGINE
 if target_engine in ["gemini", "all"]:
@@ -269,17 +253,20 @@ if target_engine in ["gemini", "all"]:
             if count >= 3:
                 break
             image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
-            prompt = prompt_template.format(topic=topic)
-            try:
-                res = gemini_client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                )
-                if save_article(topic, res.text.strip(), image_url):
-                    count += 1
-                    time.sleep(3)
-            except Exception as e:
-                print(f"Gemini error for '{topic}': {e}")
+            
+            # Loop through all 3 languages for the same topic
+            for lang in LANGUAGES:
+                prompt = prompt_template.format(topic=topic, language=lang)
+                try:
+                    res = gemini_client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                    )
+                    save_article(topic, res.text.strip(), image_url, language=lang)
+                    time.sleep(4) # Pause to prevent API rate limits
+                except Exception as e:
+                    print(f"Gemini error for '{topic}' in {lang}: {e}")
+            count += 1
 
 # RUN GITHUB GPT-4o ENGINE
 if target_engine in ["github", "all"]:
@@ -297,18 +284,21 @@ if target_engine in ["github", "all"]:
             if count >= 3:
                 break
             image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
-            prompt = prompt_template.format(topic=topic)
-            try:
-                res = github_client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7
-                )
-                if save_article(topic, res.choices[0].message.content.strip(), image_url):
-                    count += 1
-                    time.sleep(3)
-            except Exception as e:
-                print(f"GitHub GPT-4o error for '{topic}': {e}")
+            
+            # Loop through all 3 languages for the same topic
+            for lang in LANGUAGES:
+                prompt = prompt_template.format(topic=topic, language=lang)
+                try:
+                    res = github_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.7
+                    )
+                    save_article(topic, res.choices[0].message.content.strip(), image_url, language=lang)
+                    time.sleep(4) # Pause to prevent API rate limits
+                except Exception as e:
+                    print(f"GitHub GPT-4o error for '{topic}' in {lang}: {e}")
+            count += 1
 
 # Finally, ping sitemaps after all content is generated
 ping_sitemaps()
