@@ -208,22 +208,27 @@ for feed_url in RSS_FEEDS:
 prompt_template = """
 You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
 Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
-The ENTIRE output must be written in the {language} language.
+The ENTIRE output must be written in strict, formal {language}.
+
+CRITICAL EDITORIAL RULES:
+1. STRICTLY FORMAL TONE: Do NOT use any slang, clickbait, informal phrases, or derogatory words (e.g., absolutely no words like "झंडू", "बकवास", or colloquial street slang).
+2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure, professional Marathi. Do NOT mix Hindi slang into Marathi headlines or articles.
+3. Maintain strict journalistic integrity, neutrality, and respect in your wording.
 
 Follow this EXACT structure for the output:
 
-TITLE: <Write a compelling news headline in {language}>
+TITLE: <Write a formal, highly professional news headline in {language}>
 CATEGORY: <Choose ONE: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
 TAGS: <Provide 4-5 comma-separated SEO keywords in {language}>
 DESCRIPTION: <Write a keyword-rich meta description under 150 characters in {language}>
 
 ## TL;DR Summary
-* <Bullet point 1 summarizing headline in {language}>
-* <Bullet point 2 summarizing key context in {language}>
-* <Bullet point 3 summarizing current status in {language}>
+* <Bullet point 1 summarizing headline formally in {language}>
+* <Bullet point 2 summarizing key context formally in {language}>
+* <Bullet point 3 summarizing current status formally in {language}>
 
 ## In-Depth Report
-<Write 4-5 paragraphs explaining the current event comprehensively in {language}. Use subheadings (###), clear paragraphs, and a neutral journalistic tone.>
+<Write 4-5 paragraphs explaining the current event comprehensively in {language}. Use subheadings (###), clear paragraphs, and a formal, neutral journalistic tone.>
 
 ## Background & Context
 <Write 2-3 paragraphs explaining the history or previous events that led up to this moment in {language}.>
