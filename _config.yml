@@ -26,9 +26,9 @@ header_pages:
   - terms.md
   - contact.md
 
-plugins:
-  - jekyll-seo-tag
+
 
   url: "https://pishorkar.tech"
 plugins:
   - jekyll-sitemap
+  - jekyll-seo-tag
