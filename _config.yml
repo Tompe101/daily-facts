@@ -12,7 +12,7 @@ logo: /assets/social-share.png # Used for the site logo
 social:
   name: India Daily Facts # Or your name/brand
   links:
-    - https://twitter.com/yourhandle # Optional: Add your social links
+    - https://x.com/Bharat___Facts # Optional: Add your social links
 # jekyll-seo-tag uses the 'image' property for sharing cards if available
 image: /assets/social-share.png
 
