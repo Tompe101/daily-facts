@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html amp lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    <script async custom-element="amp-story" src="https://cdn.ampproject.org/v0/amp-story-1.0.js"></script>
+    <title>{{ page.title }}</title>
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    <link rel="canonical" href="{{ site.url }}{{ page.url }}">
+    <style amp-boilerplate>body{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}@keyframes -amp-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
+    <style amp-custom>
+      amp-story-page { background-color: #111; }
+      .text-box { 
+        background: rgba(0, 0, 0, 0.75); 
+        padding: 24px; 
+        border-radius: 12px; 
+        margin: 30px 20px; 
+        color: white;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+      h1 { font-size: 2.2em; line-height: 1.3; font-weight: 800; }
+      p { font-size: 1.4em; line-height: 1.5; font-weight: 500; }
+      .brand { position: absolute; top: 20px; left: 20px; color: white; font-weight: bold; background: #e63946; padding: 4px 10px; border-radius: 4px;}
+    </style>
+  </head>
+  <body>
+    <amp-story standalone
+        title="{{ page.title }}"
+        publisher="India Daily Facts"
+        publisher-logo-src="https://pishorkar.tech/favicon.ico"
+        poster-portrait-src="{{ page.image }}">
+
+      <!-- Slide 1: Headline -->
+      <amp-story-page id="slide1">
+        <amp-story-grid-layer template="fill">
+          <amp-img src="{{ page.image }}" width="720" height="1280" layout="responsive"></amp-img>
+        </amp-story-grid-layer>
+        <amp-story-grid-layer template="vertical" class="center">
+          <div class="brand">INDIA DAILY FACTS</div>
+          <div class="text-box">
+            <h1>{{ page.title }}</h1>
+            <p style="font-size: 1rem; color: #aaa; margin-top: 15px;">Swipe to read ➡️</p>
+          </div>
+        </amp-story-grid-layer>
+      </amp-story-page>
+
+      <!-- Slide 2: Context 1 -->
+      <amp-story-page id="slide2">
+        <amp-story-grid-layer template="fill">
+          <amp-img src="{{ page.image }}" width="720" height="1280" layout="responsive"></amp-img>
+        </amp-story-grid-layer>
+        <amp-story-grid-layer template="vertical" class="bottom">
+          <div class="text-box">
+            <p>{{ page.slide1 }}</p>
+          </div>
+        </amp-story-grid-layer>
+      </amp-story-page>
+
+      <!-- Slide 3: Context 2 -->
+      <amp-story-page id="slide3">
+        <amp-story-grid-layer template="fill">
+          <amp-img src="{{ page.image }}" width="720" height="1280" layout="responsive"></amp-img>
+        </amp-story-grid-layer>
+        <amp-story-grid-layer template="vertical" class="bottom">
+          <div class="text-box">
+            <p>{{ page.slide2 }}</p>
+          </div>
+        </amp-story-grid-layer>
+      </amp-story-page>
+      
+      <!-- Slide 4: Conclusion & Outlink -->
+      <amp-story-page id="slide4">
+        <amp-story-grid-layer template="fill">
+          <amp-img src="{{ page.image }}" width="720" height="1280" layout="responsive"></amp-img>
+        </amp-story-grid-layer>
+        <amp-story-grid-layer template="vertical" class="bottom">
+          <div class="text-box">
+            <p>{{ page.slide3 }}</p>
+          </div>
+        </amp-story-grid-layer>
+        
+        <!-- Native Google Discover "Swipe Up" Link -->
+        <amp-story-page-outlink layout="nodisplay">
+          <a href="{{ site.url }}{{ page.article_url }}">Read Full Article</a>
+        </amp-story-page-outlink>
+      </amp-story-page>
+
+    </amp-story>
+  </body>
+</html>
