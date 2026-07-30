@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from google import genai
 from openai import OpenAI
+import tweepy  # NEW: Twitter library
 
 SEEN_TOPICS_FILE = "_data/seen_topics.json"
 
@@ -121,24 +122,33 @@ def ping_indexnow(post_url):
 
 
 def push_to_social_media(title, post_url):
-    """Sends the new article to an n8n webhook to auto-post on social platforms."""
-    webhook_url = os.environ.get("N8N_WEBHOOK_URL")
+    """Auto-posts the new article to Twitter (X) using Tweepy."""
+    api_key = os.environ.get("TWITTER_API_KEY")
+    api_secret = os.environ.get("TWITTER_API_SECRET")
+    access_token = os.environ.get("TWITTER_ACCESS_TOKEN")
+    access_secret = os.environ.get("TWITTER_ACCESS_SECRET")
 
-    if not webhook_url:
+    if not all([api_key, api_secret, access_token, access_secret]):
+        print("Twitter credentials not fully set in GitHub Secrets. Skipping Twitter post.")
         return
 
-    data = json.dumps({
-        "title": title,
-        "url": post_url,
-        "message": f"🚨 Breaking News: {title}\n\nRead the full story here: {post_url}"
-    }).encode("utf-8")
-
     try:
-        req = urllib.request.Request(webhook_url, data=data, headers={'Content-Type': 'application/json'})
-        urllib.request.urlopen(req)
-        print(f"Social Media Webhook Sent for: {title}")
+        # Initialize Twitter API v2 Client
+        client = tweepy.Client(
+            consumer_key=api_key,
+            consumer_secret=api_secret,
+            access_token=access_token,
+            access_token_secret=access_secret
+        )
+        
+        # Format the tweet (X has 280 chars limit, so we keep it clean)
+        tweet_text = f"🚨 {title}\n\nRead the full report here: {post_url}\n\n#Trending #News #India"
+        
+        # Post the tweet
+        response = client.create_tweet(text=tweet_text)
+        print(f"Successfully posted to Twitter! Tweet ID: {response.data['id']}")
     except Exception as e:
-        print(f"Webhook failed: {e}")
+        print(f"Twitter post failed: {e}")
 
 
 def save_article(topic, content, image_url, language="English"):
