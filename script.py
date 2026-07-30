@@ -246,7 +246,10 @@ def save_article(topic, content, image_url, language="English"):
         print(f"Successfully generated Web Story: {story_filename}")
 
     ping_indexnow(published_post_url)
-    push_to_social_media(clean_title, published_post_url)
+    
+    # FIX: Only tweet the English version to prevent Twitter spam filters
+    if language == "English":
+        push_to_social_media(clean_title, published_post_url)
 
     return True
 
