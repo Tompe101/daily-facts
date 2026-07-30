@@ -46,7 +46,6 @@ def sanitize_category(raw_category):
     for a in allowed:
         if cleaned.lower() == a.lower():
             return a
-    # Fallback: model drifted from the enum (extra words/punctuation) - default safely
     print(f"Warning: unexpected CATEGORY '{raw_category}' - defaulting to 'India'")
     return "India"
 
@@ -143,7 +142,7 @@ def push_to_social_media(title, post_url):
 
 
 def save_article(topic, content, image_url, language="English"):
-    """Parses model response and writes clean Jekyll Markdown file."""
+    """Parses model response, writes clean Jekyll Markdown file, AND auto-generates a Web Story."""
     date_str = datetime.now().strftime("%Y-%m-%d")
     category = "India"
     tags = f"news, trending, india, {language.lower()}"
@@ -152,6 +151,10 @@ def save_article(topic, content, image_url, language="English"):
 
     lines = content.split('\n')
     clean_lines = []
+
+    # Extract bullets for Google Web Stories
+    tldr_bullets = []
+    in_tldr = False
 
     for line in lines:
         if line.startswith("TITLE:"):
@@ -164,6 +167,15 @@ def save_article(topic, content, image_url, language="English"):
             description = line.replace("DESCRIPTION:", "").strip()
         else:
             clean_lines.append(line)
+
+        # Parse TL;DR bullet points for Web Story slides
+        if "## TL;DR" in line:
+            in_tldr = True
+            continue
+        if in_tldr and line.strip().startswith("*"):
+            tldr_bullets.append(line.strip().lstrip("*").strip())
+        elif in_tldr and line.startswith("## "):
+            in_tldr = False
 
     content = '\n'.join(clean_lines).strip()
 
@@ -180,7 +192,6 @@ def save_article(topic, content, image_url, language="English"):
 
     image_markdown = f"\n\n![{safe_alt_text}]({image_url})\n\n"
     if "## " in content:
-        # Insert image right before the first major heading (usually TL;DR or In-Depth)
         content = re.sub(r'(## )', f'{image_markdown}\\1', content, count=1)
     else:
         content = image_markdown + content
@@ -188,6 +199,7 @@ def save_article(topic, content, image_url, language="English"):
     clean_title = translated_title.replace('"', '\\"')
     clean_desc = description.replace('"', '\\"')
 
+    # 1. Write standard news post
     with open(filename, "w", encoding="utf-8") as f:
         f.write("---\n")
         f.write("layout: post\n")
@@ -198,8 +210,30 @@ def save_article(topic, content, image_url, language="English"):
         f.write("---\n\n")
         f.write(content)
 
-    print(f"Successfully generated: {filename}")
+    print(f"Successfully generated post: {filename}")
     published_post_url = f"https://pishorkar.tech/{category.lower()}/{language.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}{lang_suffix}.html"
+
+    # 2. Write Google Web Story (if at least 3 TL;DR summary points were extracted)
+    if len(tldr_bullets) >= 3:
+        story_filename = f"_posts/{date_str}-story-{safe_title_slug}{lang_suffix}.md"
+        s1 = tldr_bullets[0].replace('"', '\\"')
+        s2 = tldr_bullets[1].replace('"', '\\"')
+        s3 = tldr_bullets[2].replace('"', '\\"')
+        article_path = f"/{category.lower()}/{language.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}{lang_suffix}.html"
+
+        with open(story_filename, "w", encoding="utf-8") as sf:
+            sf.write("---\n")
+            sf.write("layout: webstory\n")
+            sf.write(f'title: "{clean_title}"\n')
+            sf.write(f'image: "{image_url}"\n')
+            sf.write(f'slide1: "{s1}"\n')
+            sf.write(f'slide2: "{s2}"\n')
+            sf.write(f'slide3: "{s3}"\n')
+            sf.write(f'article_url: "{article_path}"\n')
+            sf.write(f"categories: [WebStories, {language}]\n")
+            sf.write("---\n")
+            
+        print(f"Successfully generated Web Story: {story_filename}")
 
     ping_indexnow(published_post_url)
     push_to_social_media(clean_title, published_post_url)
@@ -234,9 +268,6 @@ RSS_FEEDS = [
 
 os.makedirs("_posts", exist_ok=True)
 
-# Cross-run duplicate protection: a topic that already produced a post on any
-# previous day (not just today) will be skipped, since RSS "trending" feeds
-# frequently resurface the same headline over several days.
 seen_topics = load_seen_topics()
 processed_topics = set()
 feed_items = []
@@ -305,8 +336,7 @@ Do NOT include Jekyll front matter (---) or a title markdown heading (#). Start 
 
 LANGUAGES = ["English", "Marathi", "Hindi"]
 
-# Topics that successfully generated at least one article this run get marked
-# seen immediately, so a mid-run crash doesn't lose the dedup record.
+
 def mark_topic_seen(topic):
     seen_topics[normalize_topic_key(topic)] = datetime.now().strftime("%Y-%m-%d")
     save_seen_topics(seen_topics)
@@ -327,7 +357,6 @@ if target_engine in ["gemini", "all"]:
             image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
 
             topic_had_success = False
-            # Loop through all 3 languages for the same topic
             for lang in LANGUAGES:
                 prompt = prompt_template.format(topic=topic, language=lang)
                 try:
@@ -337,7 +366,7 @@ if target_engine in ["gemini", "all"]:
                     )
                     if save_article(topic, res.text.strip(), image_url, language=lang):
                         topic_had_success = True
-                    time.sleep(4)  # Pause to prevent API rate limits
+                    time.sleep(4)
                 except Exception as e:
                     print(f"Gemini error for '{topic}' in {lang}: {e}")
             if topic_had_success:
@@ -351,9 +380,6 @@ if target_engine in ["github", "all"]:
     if not github_token:
         print("Error: GITHUB_TOKEN is not set. Skipping GPT-4o execution.")
     else:
-        # NOTE: models.inference.ai.azure.com was deprecated Oct 17, 2025.
-        # New endpoint is models.github.ai/inference, and model names now
-        # require the provider prefix (e.g. "openai/gpt-4o").
         github_client = OpenAI(
             base_url="https://models.github.ai/inference",
             api_key=github_token,
@@ -365,7 +391,6 @@ if target_engine in ["github", "all"]:
             image_url = extract_image_from_rss(item) or get_fallback_topic_image(topic)
 
             topic_had_success = False
-            # Loop through all 3 languages for the same topic
             for lang in LANGUAGES:
                 prompt = prompt_template.format(topic=topic, language=lang)
                 try:
@@ -376,12 +401,11 @@ if target_engine in ["github", "all"]:
                     )
                     if save_article(topic, res.choices[0].message.content.strip(), image_url, language=lang):
                         topic_had_success = True
-                    time.sleep(4)  # Pause to prevent API rate limits
+                    time.sleep(4)
                 except Exception as e:
                     print(f"GitHub GPT-4o error for '{topic}' in {lang}: {e}")
             if topic_had_success:
                 mark_topic_seen(topic)
             count += 1
 
-# Finally, ping sitemaps after all content is generated
 ping_sitemaps()
