@@ -133,7 +133,6 @@ def push_to_social_media(title, post_url):
         return
 
     try:
-        # Initialize Twitter API v2 Client
         client = tweepy.Client(
             consumer_key=api_key,
             consumer_secret=api_secret,
@@ -141,10 +140,7 @@ def push_to_social_media(title, post_url):
             access_token_secret=access_secret
         )
         
-        # Format the tweet (X has 280 chars limit, so we keep it clean)
         tweet_text = f"🚨 {title}\n\nRead the full report here: {post_url}\n\n#Trending #News #India"
-        
-        # Post the tweet
         response = client.create_tweet(text=tweet_text)
         print(f"Successfully posted to Twitter! Tweet ID: {response.data['id']}")
     except Exception as e:
@@ -161,8 +157,6 @@ def save_article(topic, content, image_url, language="English"):
 
     lines = content.split('\n')
     clean_lines = []
-
-    # Extract bullets for Google Web Stories
     tldr_bullets = []
     in_tldr = False
 
@@ -178,7 +172,6 @@ def save_article(topic, content, image_url, language="English"):
         else:
             clean_lines.append(line)
 
-        # Parse TL;DR bullet points for Web Story slides
         if "## TL;DR" in line:
             in_tldr = True
             continue
@@ -189,10 +182,13 @@ def save_article(topic, content, image_url, language="English"):
 
     content = '\n'.join(clean_lines).strip()
 
-    # Keep the URL slug in English for clean routing, but append the language
     safe_title_slug = re.sub(r'[^a-zA-Z0-9]', '-', topic).lower()
     safe_title_slug = re.sub(r'-+', '-', safe_title_slug).strip('-')
+    
+    # 🎯 SEO FIX 1: Guaranteed Alt Text for images
     safe_alt_text = re.sub(r'[^a-zA-Z0-9 ]', '', translated_title).strip()
+    if not safe_alt_text:
+        safe_alt_text = "News update from India Daily Facts"
 
     lang_suffix = f"-{language.lower()}" if language != "English" else ""
     filename = f"_posts/{date_str}-{safe_title_slug}{lang_suffix}.md"
@@ -206,15 +202,19 @@ def save_article(topic, content, image_url, language="English"):
     else:
         content = image_markdown + content
 
+    # 🎯 SEO FIX 2: Strict Title and Description lengths (Python Fallback)
     clean_title = translated_title.replace('"', '\\"')
-    clean_desc = description.replace('"', '\\"')
+    seo_title = clean_title if len(clean_title) <= 55 else clean_title[:52].strip() + "..."
 
-    # 1. Write standard news post
+    clean_desc = description.replace('"', '\\"')
+    seo_desc = clean_desc if len(clean_desc) <= 150 else clean_desc[:147].strip() + "..."
+
+    # 1. Write standard news post with SEO-optimized front matter
     with open(filename, "w", encoding="utf-8") as f:
         f.write("---\n")
         f.write("layout: post\n")
-        f.write(f'title: "{clean_title}"\n')
-        f.write(f'description: "{clean_desc}"\n')
+        f.write(f'title: "{seo_title}"\n')
+        f.write(f'description: "{seo_desc}"\n')
         f.write(f"categories: [{category}, {language}]\n")
         f.write(f"tags: [{tags}]\n")
         f.write("---\n\n")
@@ -223,7 +223,7 @@ def save_article(topic, content, image_url, language="English"):
     print(f"Successfully generated post: {filename}")
     published_post_url = f"https://pishorkar.tech/{category.lower()}/{language.lower()}/{datetime.now().strftime('%Y/%m/%d')}/{safe_title_slug}{lang_suffix}.html"
 
-    # 2. Write Google Web Story (if at least 3 TL;DR summary points were extracted)
+    # 2. Write Google Web Story
     if len(tldr_bullets) >= 3:
         story_filename = f"_posts/{date_str}-story-{safe_title_slug}{lang_suffix}.md"
         s1 = tldr_bullets[0].replace('"', '\\"')
@@ -234,7 +234,7 @@ def save_article(topic, content, image_url, language="English"):
         with open(story_filename, "w", encoding="utf-8") as sf:
             sf.write("---\n")
             sf.write("layout: webstory\n")
-            sf.write(f'title: "{clean_title}"\n')
+            sf.write(f'title: "{seo_title}"\n')
             sf.write(f'image: "{image_url}"\n')
             sf.write(f'slide1: "{s1}"\n')
             sf.write(f'slide2: "{s2}"\n')
@@ -247,9 +247,8 @@ def save_article(topic, content, image_url, language="English"):
 
     ping_indexnow(published_post_url)
     
-    # FIX: Only tweet the English version to prevent Twitter spam filters
     if language == "English":
-        push_to_social_media(clean_title, published_post_url)
+        push_to_social_media(seo_title, published_post_url)
 
     return True
 
@@ -273,7 +272,6 @@ def ping_sitemaps():
 
 target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
 
-# UPDATED: Replaced deprecated Google Trends RSS with standard Google News RSS
 RSS_FEEDS = [
     "https://news.google.com/rss?gl=IN&hl=en-IN&ceid=IN:en",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
@@ -310,23 +308,24 @@ for feed_url in RSS_FEEDS:
     except Exception as feed_err:
         print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
 
-# UPDATED: Strict prompt to prevent translating categories
+# 🎯 SEO FIX 3: Updated Prompt with Strict Rules
 prompt_template = """
 You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
 Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
 The ENTIRE output must be written in strict, formal {language}.
 
-CRITICAL EDITORIAL RULES:
+CRITICAL EDITORIAL & SEO RULES:
 1. STRICTLY FORMAL TONE: Do NOT use any slang, clickbait, informal phrases, or derogatory words.
 2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure, professional Marathi.
-3. Maintain strict journalistic integrity, neutrality, and respect in your wording.
+3. SEO TITLE LIMIT: The TITLE MUST be extremely catchy but STRICTLY under 55 characters.
+4. SEO DESC LIMIT: The DESCRIPTION MUST be a short summary STRICTLY under 150 characters.
 
 Follow this EXACT structure for the output:
 
-TITLE: <Write a formal, highly professional news headline in {language}>
+TITLE: <Write a formal news headline in {language}. MAXIMUM 55 CHARACTERS.>
 CATEGORY: <Choose ONE from this exact English list (DO NOT TRANSLATE): Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
 TAGS: <Provide 4-5 comma-separated SEO keywords in {language}>
-DESCRIPTION: <Write a keyword-rich meta description under 150 characters in {language}>
+DESCRIPTION: <Write a keyword-rich meta description in {language}. MAXIMUM 150 CHARACTERS.>
 
 ## TL;DR Summary
 * <Bullet point 1 summarizing headline formally in {language}>
