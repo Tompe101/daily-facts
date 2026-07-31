@@ -273,8 +273,9 @@ def ping_sitemaps():
 
 target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
 
+# UPDATED: Replaced deprecated Google Trends RSS with standard Google News RSS
 RSS_FEEDS = [
-    "https://trends.google.co.in/trends/trendingsearches/daily/rss?geo=IN",
+    "https://news.google.com/rss?gl=IN&hl=en-IN&ceid=IN:en",
     "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
     "https://feeds.feedburner.com/NDTV-LatestNews"
 ]
@@ -309,20 +310,21 @@ for feed_url in RSS_FEEDS:
     except Exception as feed_err:
         print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
 
+# UPDATED: Strict prompt to prevent translating categories
 prompt_template = """
 You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
 Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
 The ENTIRE output must be written in strict, formal {language}.
 
 CRITICAL EDITORIAL RULES:
-1. STRICTLY FORMAL TONE: Do NOT use any slang, clickbait, informal phrases, or derogatory words (e.g., absolutely no words like "झंडू", "बकवास", or colloquial street slang).
-2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure, professional Marathi. Do NOT mix Hindi slang into Marathi headlines or articles.
+1. STRICTLY FORMAL TONE: Do NOT use any slang, clickbait, informal phrases, or derogatory words.
+2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure, professional Marathi.
 3. Maintain strict journalistic integrity, neutrality, and respect in your wording.
 
 Follow this EXACT structure for the output:
 
 TITLE: <Write a formal, highly professional news headline in {language}>
-CATEGORY: <Choose ONE: Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
+CATEGORY: <Choose ONE from this exact English list (DO NOT TRANSLATE): Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
 TAGS: <Provide 4-5 comma-separated SEO keywords in {language}>
 DESCRIPTION: <Write a keyword-rich meta description under 150 characters in {language}>
 
