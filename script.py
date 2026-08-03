@@ -9,7 +9,6 @@ import json
 from datetime import datetime
 from google import genai
 from openai import OpenAI
-import tweepy  # NEW: Twitter library
 
 SEEN_TOPICS_FILE = "_data/seen_topics.json"
 
@@ -121,30 +120,32 @@ def ping_indexnow(post_url):
         print(f"IndexNow ping failed: {e}")
 
 
-def push_to_social_media(title, post_url):
-    """Auto-posts the new article to Twitter (X) using Tweepy."""
-    api_key = os.environ.get("TWITTER_API_KEY")
-    api_secret = os.environ.get("TWITTER_API_SECRET")
-    access_token = os.environ.get("TWITTER_ACCESS_TOKEN")
-    access_secret = os.environ.get("TWITTER_ACCESS_SECRET")
+def push_to_facebook(title, post_url):
+    """Auto-posts the new article to a Facebook Page using Graph API."""
+    page_id = os.environ.get("FACEBOOK_PAGE_ID")
+    access_token = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN")
 
-    if not all([api_key, api_secret, access_token, access_secret]):
-        print("Twitter credentials not fully set in GitHub Secrets. Skipping Twitter post.")
+    if not page_id or not access_token:
+        print("Facebook credentials not fully set in GitHub Secrets. Skipping Facebook post.")
         return
 
     try:
-        client = tweepy.Client(
-            consumer_key=api_key,
-            consumer_secret=api_secret,
-            access_token=access_token,
-            access_token_secret=access_secret
-        )
+        url = f"https://graph.facebook.com/v19.0/{page_id}/feed"
+        message = f"🚨 {title}\n\nRead the full report here: {post_url}\n\n#Trending #News"
         
-        tweet_text = f"🚨 {title}\n\nRead the full report here: {post_url}\n\n#Trending #News #India"
-        response = client.create_tweet(text=tweet_text)
-        print(f"Successfully posted to Twitter! Tweet ID: {response.data['id']}")
+        # Facebook Graph API automatically grabs the og:image from the link!
+        payload = urllib.parse.urlencode({
+            'message': message, 
+            'link': post_url, 
+            'access_token': access_token
+        }).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=payload)
+        response = urllib.request.urlopen(req)
+        result = json.loads(response.read().decode('utf-8'))
+        print(f"Successfully posted to Facebook! Post ID: {result.get('id')}")
     except Exception as e:
-        print(f"Twitter post failed: {e}")
+        print(f"Facebook post failed: {e}")
 
 
 def save_article(topic, content, image_url, language="English"):
@@ -247,8 +248,9 @@ def save_article(topic, content, image_url, language="English"):
 
     ping_indexnow(published_post_url)
     
+    # Push English articles directly to Facebook Page
     if language == "English":
-        push_to_social_media(seo_title, published_post_url)
+        push_to_facebook(seo_title, published_post_url)
 
     return True
 
@@ -308,24 +310,25 @@ for feed_url in RSS_FEEDS:
     except Exception as feed_err:
         print(f"Failed to fetch RSS feed from {feed_url}: {feed_err}")
 
-# 🎯 SEO FIX 3: Updated Prompt with Strict Rules
+# 🎯 SEO FIX 3: Updated Prompt with Strict Rules for Viral Titles & Tags
 prompt_template = """
-You are an authoritative senior journalist for 'India Daily Facts' (pishorkar.tech).
-Write a comprehensive, in-depth, and engaging news article about this trending topic: "{topic}".
-The ENTIRE output must be written in strict, formal {language}.
+You are an expert viral news copywriter for 'India Daily Facts' (pishorkar.tech).
+Write a comprehensive, in-depth, and highly engaging news article about this trending topic: "{topic}".
+The ENTIRE output must be written in strict, formal {language} for the main content, but the Title and Description should use smart click-inducing hooks.
 
 CRITICAL EDITORIAL & SEO RULES:
-1. STRICTLY FORMAL TONE: Do NOT use any slang, clickbait, informal phrases, or derogatory words.
-2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure, professional Marathi.
-3. SEO TITLE LIMIT: The TITLE MUST be extremely catchy but STRICTLY under 55 characters.
-4. SEO DESC LIMIT: The DESCRIPTION MUST be a short summary STRICTLY under 150 characters.
+1. STRICTLY FORMAL TONE (BODY): The main body text must remain factual and professional.
+2. NO LANGUAGE MIXING: If the target language is Marathi, use 100% pure Marathi.
+3. MAGNETIC TITLE: Act as an expert viral news copywriter. Write a highly catchy, curiosity-driven headline containing the exact trending keyword. It must sound like urgent breaking news but remain factual. STRICTLY UNDER 55 CHARACTERS.
+4. SUSPENSEFUL DESCRIPTION: Write a click-worthy, suspenseful meta description that forces the user to click and read the full story. MUST contain the trending keyword. STRICTLY UNDER 150 CHARACTERS.
+5. TAGS: Provide exactly 3 to 5 highly searched, long-tail trending keywords relevant to the topic.
 
 Follow this EXACT structure for the output:
 
-TITLE: <Write a formal news headline in {language}. MAXIMUM 55 CHARACTERS.>
+TITLE: <Write a highly catchy, curiosity-driven headline in {language}. MAXIMUM 55 CHARACTERS.>
 CATEGORY: <Choose ONE from this exact English list (DO NOT TRANSLATE): Politics, Business, Technology, India, World, Sports, Science, Entertainment, Health>
-TAGS: <Provide 4-5 comma-separated SEO keywords in {language}>
-DESCRIPTION: <Write a keyword-rich meta description in {language}. MAXIMUM 150 CHARACTERS.>
+TAGS: <Provide exactly 3 to 5 comma-separated high-volume SEO keywords in {language}>
+DESCRIPTION: <Write a suspenseful, click-worthy meta description in {language}. MAXIMUM 150 CHARACTERS.>
 
 ## TL;DR Summary
 * <Bullet point 1 summarizing headline formally in {language}>
