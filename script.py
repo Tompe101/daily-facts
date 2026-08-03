@@ -12,7 +12,6 @@ from openai import OpenAI
 
 SEEN_TOPICS_FILE = "_data/seen_topics.json"
 
-
 def load_seen_topics():
     """Loads the persistent log of already-processed topics (across all past runs/days)."""
     if not os.path.exists(SEEN_TOPICS_FILE):
@@ -24,17 +23,14 @@ def load_seen_topics():
         print(f"Warning: could not read {SEEN_TOPICS_FILE} ({e}); starting fresh.")
         return {}
 
-
 def save_seen_topics(seen):
     os.makedirs(os.path.dirname(SEEN_TOPICS_FILE), exist_ok=True)
     with open(SEEN_TOPICS_FILE, "w", encoding="utf-8") as f:
         json.dump(seen, f, ensure_ascii=False, indent=2)
 
-
 def normalize_topic_key(topic):
     """Collapses whitespace/case so near-identical recurring headlines match."""
     return re.sub(r'\s+', ' ', topic.strip().lower())
-
 
 def sanitize_category(raw_category):
     """Keeps the model's CATEGORY: output inside the expected enum and URL-safe."""
@@ -48,7 +44,6 @@ def sanitize_category(raw_category):
             return a
     print(f"Warning: unexpected CATEGORY '{raw_category}' - defaulting to 'India'")
     return "India"
-
 
 def extract_image_from_rss(item):
     """Extracts actual news story photo directly from RSS item XML tags."""
@@ -83,7 +78,6 @@ def extract_image_from_rss(item):
 
     return None
 
-
 def get_fallback_topic_image(title):
     """30+ Category topic-matcher for accurate fallback photos."""
     t = title.lower()
@@ -107,7 +101,6 @@ def get_fallback_topic_image(title):
         return "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80"
     return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80"
 
-
 def ping_indexnow(post_url):
     """Notifies search engines instantly upon publishing."""
     indexnow_key = os.environ.get("INDEXNOW_KEY", "pishorkartechkey123")
@@ -118,7 +111,6 @@ def ping_indexnow(post_url):
         print(f"IndexNow Ping Sent for: {post_url}")
     except Exception as e:
         print(f"IndexNow ping failed: {e}")
-
 
 def push_to_facebook(title, post_url):
     """Auto-posts the new article to a Facebook Page using Graph API."""
@@ -143,10 +135,9 @@ def push_to_facebook(title, post_url):
         req = urllib.request.Request(url, data=payload)
         response = urllib.request.urlopen(req)
         result = json.loads(response.read().decode('utf-8'))
-        print(f"Successfully posted to Facebook! Post ID: {result.get('id')}")
+        print(f"✅ Successfully posted to Facebook! Post ID: {result.get('id')}")
     except Exception as e:
-        print(f"Facebook post failed: {e}")
-
+        print(f"❌ Facebook post failed: {e}")
 
 def save_article(topic, content, image_url, language="English"):
     """Parses model response, writes clean Jekyll Markdown file, AND auto-generates a Web Story."""
@@ -254,7 +245,6 @@ def save_article(topic, content, image_url, language="English"):
 
     return True
 
-
 def ping_sitemaps():
     """Force Google and Bing to crawl the new articles immediately."""
     sitemap_url = urllib.parse.quote("https://pishorkar.tech/sitemap.xml")
@@ -269,8 +259,7 @@ def ping_sitemaps():
         urllib.request.urlopen(f"https://www.bing.com/ping?sitemap={sitemap_url}")
         print("Successfully pinged Bing Sitemap")
     except Exception as e:
-        print(f"Bing ping failed: {e}")
-
+        print(f"Bing ping failed (Expected as Bing retired this): {e}")
 
 target_engine = sys.argv[1].lower() if len(sys.argv) > 1 else "all"
 
@@ -353,13 +342,12 @@ Do NOT include Jekyll front matter (---) or a title markdown heading (#). Start 
 
 LANGUAGES = ["English", "Marathi", "Hindi"]
 
-
 def mark_topic_seen(topic):
     seen_topics[normalize_topic_key(topic)] = datetime.now().strftime("%Y-%m-%d")
     save_seen_topics(seen_topics)
 
 
-# RUN GEMINI ENGINE
+# --- 1. RUN GEMINI ENGINE ---
 if target_engine in ["gemini", "all"]:
     print("--- RUNNING GEMINI ENGINE ---")
     gemini_key = os.environ.get("GEMINI_API_KEY")
@@ -383,24 +371,28 @@ if target_engine in ["gemini", "all"]:
                     )
                     if save_article(topic, res.text.strip(), image_url, language=lang):
                         topic_had_success = True
-                    time.sleep(4)
+                    
+                    # ✅ FIXED: 15 seconds rate-limit brake to prevent 429 Error
+                    print(f"⏳ Waiting 15 seconds to avoid Gemini rate limits...")
+                    time.sleep(15) 
+                    
                 except Exception as e:
-                    print(f"Gemini error for '{topic}' in {lang}: {e}")
+                    print(f"❌ Gemini error for '{topic}' in {lang}: {e}")
             if topic_had_success:
                 mark_topic_seen(topic)
             count += 1
 
-# RUN GITHUB GPT-4o ENGINE
-if target_engine in ["github", "all"]:
-    print("--- RUNNING GITHUB GPT-4o ENGINE ---")
-    github_token = os.environ.get("GITHUB_TOKEN")
-    if not github_token:
-        print("Error: GITHUB_TOKEN is not set. Skipping GPT-4o execution.")
+
+# --- 2. RUN OFFICIAL OPENAI (GPT-4o) ENGINE ---
+# Updated from deprecated GitHub Models to the Official OpenAI Python SDK
+if target_engine in ["openai", "all"]:
+    print("--- RUNNING OFFICIAL GPT-4o ENGINE ---")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        print("Error: OPENAI_API_KEY is not set. Skipping GPT-4o execution.")
     else:
-        github_client = OpenAI(
-            base_url="https://models.github.ai/inference",
-            api_key=github_token,
-        )
+        # Base URL removed so it natively targets the official OpenAI endpoints
+        openai_client = OpenAI(api_key=openai_key)
         count = 0
         for topic, item in feed_items:
             if count >= 3:
@@ -411,16 +403,19 @@ if target_engine in ["github", "all"]:
             for lang in LANGUAGES:
                 prompt = prompt_template.format(topic=topic, language=lang)
                 try:
-                    res = github_client.chat.completions.create(
-                        model="openai/gpt-4o",
+                    res = openai_client.chat.completions.create(
+                        model="gpt-4o",
                         messages=[{"role": "user", "content": prompt}],
                         temperature=0.7
                     )
                     if save_article(topic, res.choices[0].message.content.strip(), image_url, language=lang):
                         topic_had_success = True
-                    time.sleep(4)
+                    
+                    # ✅ Added a standard safety delay here too
+                    print(f"⏳ Waiting 5 seconds for OpenAI safety...")
+                    time.sleep(5)
                 except Exception as e:
-                    print(f"GitHub GPT-4o error for '{topic}' in {lang}: {e}")
+                    print(f"❌ OpenAI GPT-4o error for '{topic}' in {lang}: {e}")
             if topic_had_success:
                 mark_topic_seen(topic)
             count += 1
