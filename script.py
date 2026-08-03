@@ -366,7 +366,7 @@ if target_engine in ["gemini", "all"]:
                 prompt = prompt_template.format(topic=topic, language=lang)
                 try:
                     res = gemini_client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-2.0-flash',  # ✅ Yahan model change kar diya gaya hai
                         contents=prompt,
                     )
                     if save_article(topic, res.text.strip(), image_url, language=lang):
